@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from typing import Any, Dict, Optional
 from .models import FieldResult, CompareResponse
+from .parsers.field_mapping import normalize_fields
 
 
 TRUE_VALUES = {"true", "yes", "y", "1", "on", "نعم", "صح"}
@@ -53,7 +54,6 @@ def _looks_like_phone(s: str) -> bool:
     if not (8 <= len(digits) <= 15):
         return False
 
-    # رفض السنة الصرفة 1900-2100
     if len(digits) == 4:
         try:
             year = int(digits)
@@ -62,7 +62,6 @@ def _looks_like_phone(s: str) -> bool:
         except ValueError:
             pass
 
-    # رفض YYYYMMDD (تواريخ بلا فواصل)
     if len(digits) == 8 and digits[:2] in ("19", "20"):
         return False
 
@@ -113,11 +112,15 @@ def _normalize(value: Any) -> Any:
 
 
 def compare_data(truth: Dict[str, Any], form: Dict[str, Any]) -> CompareResponse:
+    # 1) حوّل أسماء الحقول إلى أسماء معيارية
+    truth_norm = normalize_fields(truth)
+    form_norm = normalize_fields(form)
+
     results: list[FieldResult] = []
     summary = {"MATCH": 0, "CONFLICT": 0, "UNKNOWN": 0}
 
-    for field, form_value in form.items():
-        truth_value = truth.get(field, None)
+    for field, form_value in form_norm.items():
+        truth_value = truth_norm.get(field, None)
 
         if truth_value is None:
             status = "UNKNOWN"
