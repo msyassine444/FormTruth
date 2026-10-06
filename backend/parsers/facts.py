@@ -1,6 +1,8 @@
 import re
 from typing import Any, Dict, List
 
+from .dates import parse_date
+
 
 EMAIL_RE = re.compile(
     r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",
@@ -26,9 +28,18 @@ NAME_RE = re.compile(
     re.IGNORECASE,
 )
 
-NATIONAL_ID_RE = re.compile(
-    r"\b[A-Z]{1,3}\d{5,10}\b|\b\d{8,10}\b"
+NATIONAL_ID_LABEL_RE = re.compile(
+    r"(?:national[ \t_]*id|id[ \t_]*number|identity[ \t_]*number|"
+    r"passport(?:[ \t_]*number)?|cin|ssn|"
+    r"رقم[ \t]*الهوية|رقم[ \t]*الجواز)"
+    r"[ \t]*[:\-][ \t]*([A-Za-z0-9][A-Za-z0-9\-]{3,19})",
+    re.IGNORECASE,
 )
+
+# An ID token that mixes letters and digits (e.g. "AB123456"). Pure 8-10 digit
+# numbers are intentionally NOT treated as IDs -- those are far more likely to
+# be phone numbers, dates without separators, or unrelated numeric codes.
+NATIONAL_ID_TOKEN_RE = re.compile(r"\b[A-Z]{1,3}\d{5,10}\b")
 
 
 def _normalize_phone(raw: str) -> str | None:
@@ -57,17 +68,14 @@ def _normalize_phone(raw: str) -> str | None:
 
 
 def _normalize_date(raw: str) -> str | None:
-    s = raw.strip().replace("/", "-")
-    parts = s.split("-")
-    if len(parts) != 3:
+    parsed = parse_date(raw)
+    if parsed is None:
         return None
-    if len(parts[0]) == 4:
-        y, m, d = parts
-    else:
-        d, m, y = parts
-    if len(y) == 2:
-        y = "20" + y
-    return f"{y.zfill(4)}-{m.zfill(2)}-{d.zfill(2)}"
+    if parsed.iso:
+        return parsed.iso
+    # Ambiguous (e.g. "05/12/2009") -> never guess. Keep the raw value so the
+    # consistency engine can mark the field UNKNOWN instead of a false MATCH.
+    return parsed.raw
 
 
 def _clean_name(raw: str) -> str:
@@ -135,13 +143,15 @@ def extract_names(text: str) -> List[str]:
 
 
 def extract_national_ids(text: str) -> List[str]:
-    found = NATIONAL_ID_RE.findall(text)
+    found = list(NATIONAL_ID_LABEL_RE.findall(text))
+    found.extend(NATIONAL_ID_TOKEN_RE.findall(text))
     seen = set()
     result = []
     for raw in found:
-        if raw not in seen:
-            seen.add(raw)
-            result.append(raw)
+        value = raw.strip()
+        if value and value not in seen:
+            seen.add(value)
+            result.append(value)
     return result
 
 

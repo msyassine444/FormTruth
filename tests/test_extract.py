@@ -62,6 +62,17 @@ def test_extract_too_large():
     assert "too large" in response.json()["detail"].lower()
 
 
+def test_upload_limit_is_configurable_via_env(monkeypatch):
+    monkeypatch.setenv("FORM_TRUTH_MAX_UPLOAD_BYTES", "8")
+    response = _upload("cv.txt", b"123456789")
+    assert response.status_code == 400
+    assert "too large" in response.json()["detail"].lower()
+
+    monkeypatch.setenv("FORM_TRUTH_MAX_UPLOAD_BYTES", "64")
+    ok = _upload("cv.txt", b"123456789")
+    assert ok.status_code == 200
+
+
 def test_extract_missing_file_field():
     response = client.post("/extract")
     assert response.status_code == 422

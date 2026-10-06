@@ -3,19 +3,11 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 from .models import FieldResult, CompareResponse
 from .parsers.field_mapping import normalize_fields
+from .parsers.dates import parse_date
 
 
 TRUE_VALUES = {"true", "yes", "y", "1", "on", "نعم", "صح"}
 FALSE_VALUES = {"false", "no", "n", "0", "off", "لا", "خطأ"}
-
-DATE_FORMATS = [
-    "%Y-%m-%d",
-    "%d/%m/%Y",
-    "%d-%m-%Y",
-    "%m/%d/%Y",
-    "%Y/%m/%d",
-]
-
 
 def _to_bool(value: Any) -> Optional[bool]:
     if isinstance(value, bool):
@@ -38,13 +30,18 @@ def _to_date(value: Any) -> Optional[datetime]:
     if isinstance(value, datetime):
         return value
     if isinstance(value, str):
-        s = value.strip()
-        for fmt in DATE_FORMATS:
-            try:
-                return datetime.strptime(s, fmt)
-            except ValueError:
-                continue
+        parsed = parse_date(value)
+        if parsed is not None and parsed.iso:
+            year, month, day = (int(p) for p in parsed.iso.split("-"))
+            return datetime(year, month, day)
     return None
+
+
+def _date_is_ambiguous(value: Any) -> bool:
+    if isinstance(value, str):
+        parsed = parse_date(value)
+        return parsed is not None and parsed.ambiguous
+    return False
 
 
 def _looks_like_phone(s: str) -> bool:
@@ -71,14 +68,21 @@ def _looks_like_phone(s: str) -> bool:
     return True
 
 
-def _normalize_phone(value: Any) -> Optional[str]:
+_DEFAULT_COUNTRY_PREFIX = "212"  # Morocco; explicit default, not an assumption
+
+
+def _normalize_phone(value: Any, country_prefix: str = _DEFAULT_COUNTRY_PREFIX) -> Optional[str]:
     if not isinstance(value, str):
         return None
     if not _looks_like_phone(value):
         return None
     digits = re.sub(r"\D", "", value)
-    if digits.startswith("212"):
-        digits = digits[3:]
+    # International trunk prefix: 00 6... == +6...
+    if digits.startswith("00"):
+        digits = digits[2:]
+    # Strip the configured country prefix explicitly (default Morocco).
+    if country_prefix and digits.startswith(country_prefix):
+        digits = digits[len(country_prefix):]
     elif digits.startswith("0"):
         digits = digits[1:]
     return digits
@@ -88,6 +92,11 @@ def _normalize(value: Any) -> Any:
     b = _to_bool(value)
     if b is not None:
         return ("bool", b)
+
+    # An ambiguous date (e.g. "05/12/2009") must never be resolved into a
+    # single value -- it can only ever be UNKNOWN.
+    if _date_is_ambiguous(value):
+        return ("ambiguous_date", None)
 
     d = _to_date(value)
     if d is not None:
@@ -124,10 +133,19 @@ def compare_data(truth: Dict[str, Any], form: Dict[str, Any]) -> CompareResponse
 
         if truth_value is None:
             status = "UNKNOWN"
-        elif _normalize(truth_value) == _normalize(form_value):
-            status = "MATCH"
         else:
-            status = "CONFLICT"
+            truth_norm_val = _normalize(truth_value)
+            form_norm_val = _normalize(form_value)
+            # Never guess an ambiguous date: it cannot be a MATCH or CONFLICT.
+            if (
+                truth_norm_val[0] == "ambiguous_date"
+                or form_norm_val[0] == "ambiguous_date"
+            ):
+                status = "UNKNOWN"
+            elif truth_norm_val == form_norm_val:
+                status = "MATCH"
+            else:
+                status = "CONFLICT"
 
         summary[status] += 1
         results.append(

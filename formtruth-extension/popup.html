@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+  <title>FormTruth</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+
+  <header class="ft-header">
+    <div class="ft-brand">
+      <span class="ft-logo">FT</span>
+
+      <div>
+        <h1>FormTruth</h1>
+        <p class="ft-sub">
+          Truth Profile verifier &middot; local only
+        </p>
+      </div>
+    </div>
+
+    <button
+      id="theme-toggle"
+      class="ft-icon-btn"
+      title="Toggle theme"
+      aria-label="Toggle theme"
+    >
+      🌙
+    </button>
+  </header>
+
+
+  <nav class="ft-tabs" role="tablist">
+
+    <button
+      role="tab"
+      id="tab-profile"
+      aria-selected="true"
+      data-view="profile"
+    >
+      Profile
+    </button>
+
+    <button
+      role="tab"
+      id="tab-scan"
+      aria-selected="false"
+      data-view="scan"
+    >
+      Scan
+    </button>
+
+    <button
+      role="tab"
+      id="tab-history"
+      aria-selected="false"
+      data-view="history"
+    >
+      History
+    </button>
+
+  </nav>
+
+
+  <main class="ft-main">
+
+    <!-- ========================================================= -->
+    <!-- PROFILE -->
+    <!-- ========================================================= -->
+
+    <section id="view-profile">
+
+      <div class="ft-profile-switcher">
+
+        <label for="profile-select">
+          Active profile
+        </label>
+
+        <select
+          id="profile-select"
+          aria-label="Active profile"
+        ></select>
+
+        <button
+          id="profile-new"
+          class="ft-mini"
+        >
+          New
+        </button>
+
+        <button
+          id="profile-delete"
+          class="ft-mini"
+        >
+          Delete
+        </button>
+
+      </div>
+
+
+      <div
+        id="ledger"
+        class="ft-ledger"
+      ></div>
+
+
+      <div class="ft-actions">
+
+        <button
+          id="save-profile"
+          class="ft-primary"
+        >
+          Save profile
+        </button>
+
+        <button
+          id="clear-profile"
+          class="ft-secondary"
+        >
+          Clear profile
+        </button>
+
+      </div>
+
+
+      <details class="ft-import">
+
+        <summary>
+          Settings
+        </summary>
+
+        <div class="ft-field">
+          <label for="setting-country">
+            Country phone prefix
+          </label>
+
+          <select id="setting-country">
+            <option value="212">Morocco (+212)</option>
+            <option value="20">Egypt (+20)</option>
+            <option value="966">Saudi Arabia (+966)</option>
+            <option value="971">UAE (+971)</option>
+            <option value="33">France (+33)</option>
+            <option value="49">Germany (+49)</option>
+            <option value="44">UK (+44)</option>
+            <option value="1">US/Canada (+1)</option>
+          </select>
+        </div>
+
+        <label class="ft-field">
+          <input
+            type="checkbox"
+            id="setting-firewall"
+          />
+          Enable Consistency Firewall (block forms with conflicts)
+        </label>
+
+        <button
+          id="setting-save"
+          class="ft-primary"
+        >
+          Save settings
+        </button>
+
+        <p
+          id="setting-status"
+          class="ft-status"
+          role="status"
+        ></p>
+
+      </details>
+
+
+      <details class="ft-import">
+
+        <summary>
+          Import / export Truth Profile (JSON)
+        </summary>
+
+        <p class="ft-hint">
+          Paste the JSON from the backend
+          <code>/build-truth</code>
+          endpoint, or a FormTruth profile export.
+          Nothing leaves your browser.
+        </p>
+
+
+        <textarea
+          id="import-text"
+          rows="4"
+          spellcheck="false"
+          placeholder='{"truth": {"name": "...", "email": "..."}}'
+        ></textarea>
+
+
+        <div class="ft-actions ft-row">
+
+          <button
+            id="import-apply"
+            class="ft-primary"
+          >
+            Import
+          </button>
+
+          <button
+            id="export-profile"
+            class="ft-secondary"
+          >
+            Export
+          </button>
+
+        </div>
+
+
+        <input
+          id="import-file"
+          type="file"
+          accept="application/json,.json"
+        />
+
+
+        <p
+          id="import-status"
+          class="ft-status"
+          role="status"
+        ></p>
+
+      </details>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- SCAN -->
+    <!-- ========================================================= -->
+
+    <section
+      id="view-scan"
+      hidden
+    >
+
+      <button
+        id="scan-btn"
+        class="ft-primary ft-lg"
+      >
+        &#128269; Scan this page
+      </button>
+
+
+      <button
+        id="export-report"
+        class="ft-secondary ft-lg"
+      >
+        &#11015; Export report
+      </button>
+
+
+      <p
+        id="scan-summary"
+        class="ft-status"
+        role="status"
+      ></p>
+
+
+      <p
+        id="scan-dirty-hint"
+        class="ft-status"
+        role="note"
+        hidden
+      ></p>
+
+
+      <ul
+        id="results"
+        class="ft-results"
+      ></ul>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- HISTORY -->
+    <!-- ========================================================= -->
+
+    <section
+      id="view-history"
+      hidden
+    >
+
+      <div class="ft-history-header">
+
+        <div>
+          <h2 class="ft-section-title">
+            Scan History
+          </h2>
+
+          <p class="ft-history-sub">
+            Your recent scans are stored locally.
+          </p>
+        </div>
+
+
+        <button
+          id="clear-history"
+          class="ft-secondary ft-small-danger"
+        >
+          Clear
+        </button>
+
+      </div>
+
+
+      <div
+        id="history-status"
+        class="ft-status"
+        role="status"
+      ></div>
+
+
+      <div
+        id="history-list"
+        class="ft-history-list"
+      ></div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="ft-footer">
+
+    <span>
+      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>
+    </span>
+
+    <span class="ft-version">
+      v1.0.0
+    </span>
+
+  </footer>
+
+
+  <script
+    src="popup.js"
+    type="module"
+  ></script>
+
+</body>
+</html>

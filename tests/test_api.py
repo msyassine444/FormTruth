@@ -57,12 +57,22 @@ def test_compare_mixed():
 
 def test_compare_normalization_via_api():
     payload = {
-        "truth": {"dob": "2009-05-12", "phone": "0612345678"},
-        "form":  {"dob": "12/05/2009", "phone": "+212612345678"},
+        "truth": {"dob": "2009-12-25", "phone": "0612345678"},
+        "form":  {"dob": "25/12/2009", "phone": "+212612345678"},
     }
     response = client.post("/compare", json=payload)
     assert response.status_code == 200
     assert response.json()["summary"] == {"MATCH": 2, "CONFLICT": 0, "UNKNOWN": 0}
+
+
+def test_compare_ambiguous_date_via_api_returns_unknown():
+    payload = {
+        "truth": {"dob": "2009-05-12"},
+        "form": {"dob": "05/12/2009"},
+    }
+    response = client.post("/compare", json=payload)
+    assert response.status_code == 200
+    assert response.json()["summary"] == {"MATCH": 0, "CONFLICT": 0, "UNKNOWN": 1}
 
 
 def test_compare_empty_bodies():

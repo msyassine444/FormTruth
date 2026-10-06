@@ -1,0 +1,23 @@
+{
+  "description": "Shared normalization-parity cases consumed by BOTH backend (Python) and extension (JavaScript) tests. Expected statuses must agree. EMPTY is extension-only and intentionally excluded here.",
+  "cases": [
+    { "name": "moroccan phone local vs international", "truth": { "phone": "0612345678" }, "form": { "phone": "+212612345678" }, "expected": { "phone": "MATCH" } },
+    { "name": "phone with spaces", "truth": { "phone": "06 12 34 56 78" }, "form": { "phone": "+212612345678" }, "expected": { "phone": "MATCH" } },
+    { "name": "phone conflict", "truth": { "phone": "0612345678" }, "form": { "phone": "0699999999" }, "expected": { "phone": "CONFLICT" } },
+    { "name": "whitespace tolerant", "truth": { "name": "  Sara  " }, "form": { "name": "Sara" }, "expected": { "name": "MATCH" } },
+    { "name": "case insensitive", "truth": { "name": "SARA" }, "form": { "name": "sara" }, "expected": { "name": "MATCH" } },
+    { "name": "email case insensitive", "truth": { "email": "A@B.COM" }, "form": { "email": "a@b.com" }, "expected": { "email": "MATCH" } },
+    { "name": "date iso separators", "truth": { "dob": "2009-05-12" }, "form": { "dob": "2009/05/12" }, "expected": { "dob": "MATCH" } },
+    { "name": "unambiguous day-first date", "truth": { "dob": "2009-12-25" }, "form": { "dob": "25/12/2009" }, "expected": { "dob": "MATCH" } },
+    { "name": "ambiguous date is UNKNOWN", "truth": { "dob": "05/12/2009" }, "form": { "dob": "05/12/2009" }, "expected": { "dob": "UNKNOWN" } },
+    { "name": "ambiguous date on form side is UNKNOWN", "truth": { "dob": "2009-12-05" }, "form": { "dob": "05/12/2009" }, "expected": { "dob": "UNKNOWN" } },
+    { "name": "boolean arabic yes", "truth": { "has_passport": "نعم" }, "form": { "has_passport": "yes" }, "expected": { "has_passport": "MATCH" } },
+    { "name": "boolean one vs on", "truth": { "has_passport": "1" }, "form": { "has_passport": "on" }, "expected": { "has_passport": "MATCH" } },
+    { "name": "boolean conflict", "truth": { "has_passport": "yes" }, "form": { "has_passport": "لا" }, "expected": { "has_passport": "CONFLICT" } },
+    { "name": "number string vs int", "truth": { "employment_start": 2022 }, "form": { "employment_start": "2022" }, "expected": { "employment_start": "MATCH" } },
+    { "name": "number with thousands comma", "truth": { "salary": "1,000" }, "form": { "salary": "1000" }, "expected": { "salary": "MATCH" } },
+    { "name": "unknown field when truth missing", "truth": {}, "form": { "name": "Sara" }, "expected": { "name": "UNKNOWN" } },
+    { "name": "value conflict", "truth": { "city": "Casablanca" }, "form": { "city": "Rabat" }, "expected": { "city": "CONFLICT" } },
+    { "name": "phone 00-intl equals plus-intl", "truth": { "phone": "+971 501234567" }, "form": { "phone": "00 971 50 123 4567" }, "expected": { "phone": "MATCH" } }
+  ]
+}

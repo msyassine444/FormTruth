@@ -1,8 +1,40 @@
 from typing import Any, Dict, List
 
 
-def _first_or_none(items: List[str]) -> str | None:
-    return items[0] if items else None
+# facts key -> (truth field, human label, warning wording)
+_FACT_FALLBACKS = (
+    ("names", "name", "names"),
+    ("emails", "email", "emails"),
+    ("phones", "phone", "phone numbers"),
+    ("urls", "website", "URLs"),
+    ("national_ids", "national_id", "national IDs"),
+)
+
+
+def _assign_single_fact(
+    truth: Dict[str, Any],
+    warnings: List[str],
+    facts: Dict[str, Any],
+    facts_key: str,
+    field: str,
+    noun: str,
+) -> None:
+    """Assign a generic fact only when it is unambiguous.
+
+    If the document yields several distinct values for the same fact type and
+    none of them is explicitly labeled, we cannot know which one is the user's
+    -> never guess: leave the field unknown and warn instead.
+    """
+    if field in truth:
+        return
+    items = [value for value in (facts.get(facts_key) or []) if value]
+    if len(items) == 1:
+        truth[field] = items[0]
+    elif len(items) > 1:
+        warnings.append(
+            f"Multiple {noun} found ({items}) but none is labeled '{field}'; "
+            f"leaving '{field}' unknown. Use a contextual label or 'hints'."
+        )
 
 
 def build_truth(
@@ -29,42 +61,20 @@ def build_truth(
         if value is not None:
             truth[key] = value
 
-    # 2) facts → fallback للحقول غير المغطّاة
-    if "name" not in truth:
-        name = _first_or_none(facts.get("names", []))
-        if name:
-            truth["name"] = name
+    # 2) facts → fallback للحقول غير المغطّاة (فقط عند قيمة واحدة غير ملتبسة)
+    for facts_key, field, noun in _FACT_FALLBACKS:
+        _assign_single_fact(truth, warnings, facts, facts_key, field, noun)
 
-    if "email" not in truth:
-        email = _first_or_none(facts.get("emails", []))
-        if email:
-            truth["email"] = email
-
-    if "phone" not in truth:
-        phone = _first_or_none(facts.get("phones", []))
-        if phone:
-            truth["phone"] = phone
-
-    if "website" not in truth:
-        url = _first_or_none(facts.get("urls", []))
-        if url:
-            truth["website"] = url
-
-    if "national_id" not in truth:
-        nat_id = _first_or_none(facts.get("national_ids", []))
-        if nat_id:
-            truth["national_id"] = nat_id
-
-    # dob: فقط إذا لم يُحدد في contextual ولا hints
+    # dob: never inferred from a stray/unlabeled date. Only an explicit
+    # contextual label (e.g. "DOB: ...") or a hint may set it.
     if "dob" not in truth and "dob" not in hints:
         dates = facts.get("dates", []) or []
-        if dates:
-            truth["dob"] = dates[0]
-            if len(dates) > 1:
-                warnings.append(
-                    f"Multiple dates found ({dates}); first one assigned to 'dob'. "
-                    f"Use contextual labels (e.g. 'DOB: ...') or 'hints'."
-                )
+        if len(dates) > 1:
+            warnings.append(
+                f"Multiple dates found ({dates}) but none is labeled 'dob'; "
+                f"leaving 'dob' unknown. Use contextual labels (e.g. 'DOB: ...') "
+                f"or 'hints'."
+            )
 
     # 3) hints (الأعلى أولوية)
     for key, value in hints.items():

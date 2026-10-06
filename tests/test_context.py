@@ -16,9 +16,17 @@ def test_dob_extraction():
 
 
 def test_dob_normalization():
-    text = "Date of Birth: 12/05/2009"
+    # 25/12 can only be DD/MM -> unambiguous, normalized to ISO.
+    text = "Date of Birth: 25/12/2009"
     ctx = extract_contextual_facts(text)
-    assert ctx["dob"] == "2009-05-12"
+    assert ctx["dob"] == "2009-12-25"
+
+
+def test_dob_ambiguous_date_preserved():
+    # 05/12/2009 is ambiguous -> keep raw, never guess a single date.
+    text = "DOB: 05/12/2009"
+    ctx = extract_contextual_facts(text)
+    assert ctx["dob"] == "05/12/2009"
 
 
 def test_employment_start():
@@ -199,7 +207,7 @@ def test_full_pipeline_with_context():
             "name": "Yassine Annous",
             "email": "Yassine Annous@example.com",
             "phone": "+212612345678",
-            "dob": "12/05/2009",
+            "dob": "2009/05/12",
         },
     })
     assert r3.status_code == 200

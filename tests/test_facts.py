@@ -47,15 +47,17 @@ def test_date_extraction_iso():
 
 
 def test_date_extraction_slash():
-    text = "DOB: 12/05/2009"
+    # 25/12 can only be DD/MM -> unambiguous, normalized to ISO.
+    text = "DOB: 25/12/2009"
     facts = extract_facts(text)
-    assert "2009-05-12" in facts["dates"]
+    assert "2009-12-25" in facts["dates"]
 
 
 def test_date_extraction_dash():
-    text = "DOB: 12-05-2009"
+    # 25-12 can only be DD/MM -> unambiguous, normalized to ISO.
+    text = "DOB: 25-12-2009"
     facts = extract_facts(text)
-    assert "2009-05-12" in facts["dates"]
+    assert "2009-12-25" in facts["dates"]
 
 
 def test_url_extraction():
@@ -145,3 +147,74 @@ def test_phone_does_not_extract_date_without_separators():
     facts = extract_facts(text)
     # 20090512 يجب ألا يُلتقط كرقم هاتف
     assert "20090512" not in facts["phones"]
+
+
+# ---------------------------
+# National ID: must not over-match
+# ---------------------------
+
+def test_phone_is_not_national_id():
+    facts = extract_facts("Phone: 0612345678")
+    assert facts["national_ids"] == []
+
+
+def test_country_code_phone_is_not_national_id():
+    facts = extract_facts("Tel: +212612345678")
+    assert facts["national_ids"] == []
+
+
+def test_date_without_separators_is_not_national_id():
+    facts = extract_facts("DOB: 20090512")
+    assert facts["national_ids"] == []
+
+
+def test_unrelated_number_is_not_national_id():
+    facts = extract_facts("Invoice no. 12345678")
+    assert facts["national_ids"] == []
+
+
+def test_labeled_national_id_is_extracted():
+    facts = extract_facts("National ID: 12345678")
+    assert "12345678" in facts["national_ids"]
+
+
+def test_labeled_passport_is_extracted():
+    facts = extract_facts("Passport Number: AB123456")
+    assert "AB123456" in facts["national_ids"]
+
+
+def test_labeled_arabic_id_is_extracted():
+    facts = extract_facts("رقم الهوية: 98765432")
+    assert "98765432" in facts["national_ids"]
+
+
+def test_alphanumeric_id_token_is_extracted():
+    facts = extract_facts("Reference AB123456 on the card")
+    assert "AB123456" in facts["national_ids"]
+
+
+def test_national_ids_deduplicated():
+    facts = extract_facts("National ID: 12345678\nID number: 12345678")
+    assert facts["national_ids"].count("12345678") == 1
+
+
+# ---------------------------
+# Ambiguous dates are never guessed
+# ---------------------------
+
+def test_ambiguous_slash_date_is_preserved_not_normalized():
+    facts = extract_facts("DOB: 05/12/2009")
+    # 05/12/2009 = 5 Dec OR 12 May -> keep raw, do not pick an ISO value.
+    assert "05/12/2009" in facts["dates"]
+    assert "2009-12-05" not in facts["dates"]
+    assert "2009-05-12" not in facts["dates"]
+
+
+def test_unambiguous_dd_mm_date_is_normalized():
+    facts = extract_facts("DOB: 31/01/2000")
+    assert "2000-01-31" in facts["dates"]
+
+
+def test_unambiguous_mm_dd_date_is_normalized():
+    facts = extract_facts("DOB: 12/25/2009")
+    assert "2009-12-25" in facts["dates"]

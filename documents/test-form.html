@@ -1,36 +1,84 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>FormTruth Test Form</title>
   <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
-    label { display: block; margin-top: 12px; font-weight: 600; }
-    input { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; }
-    button { margin-top: 16px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 32px auto; padding: 0 20px; color: #111827; }
+    h1 { font-size: 20px; }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-top: 24px; }
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: 13px; }
+    input { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
+    .legend { font-size: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+    .legend code { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0 4px; }
+    .legend li { margin: 4px 0; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; }
+    th, td { border: 1px solid #e5e7eb; padding: 4px 8px; text-align: left; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+    button { margin-top: 16px; padding: 10px 20px; background: #2563eb; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>Registration Form</h1>
-  <form>
+  <h1>FormTruth — Local Test Form</h1>
+
+  <div class="legend">
+    <p><strong>How to use:</strong> import the demo profile below into the extension
+    (Profile tab &rarr; <em>Import / export Truth Profile</em>), then run
+    <em>Scan this page</em> and compare against the expected results.</p>
+
+    <p><strong>Demo Truth Profile</strong> (paste into Import):</p>
+    <pre>{
+  "truth": {
+    "name": "Sara El Idrissi",
+    "email": "sara@example.com",
+    "phone": "0612345678",
+    "dob": "1995-04-23",
+    "address": "12 Rue Example"
+  }
+}</pre>
+
+    <p><strong>Expected statuses</strong> (all fake data):</p>
+    <table>
+      <tr><th>Field</th><th>Value</th><th>Expected</th><th>Why</th></tr>
+      <tr><td>Full Name</td><td>Sara El Idrissi</td><td>MATCH</td><td>Same as profile</td></tr>
+      <tr><td>Email Address</td><td>Sara@Example.com</td><td>MATCH</td><td>Email compare is case-insensitive</td></tr>
+      <tr><td>Mobile Number</td><td>0611111111</td><td>CONFLICT</td><td>Different from profile phone</td></tr>
+      <tr><td>Date of Birth</td><td>05/12/2009</td><td>UNKNOWN</td><td>Ambiguous date — never guessed</td></tr>
+      <tr><td>National ID</td><td>AB123456</td><td>UNKNOWN</td><td>No trusted value in profile</td></tr>
+      <tr><td>City</td><td>Marrakesh</td><td>UNKNOWN</td><td>No trusted value in profile</td></tr>
+      <tr><td>Address</td><td>(empty)</td><td>EMPTY</td><td>Form field has no value</td></tr>
+    </table>
+    <p>Aliases exercised: <code>fullname</code>, <code>type=email</code>,
+    <code>type=tel</code>, <code>dob</code>, <code>passport</code> (national_id),
+    <code>address</code>, <code>city</code>.</p>
+  </div>
+
+  <form onsubmit="return false">
+    <h2>Identity</h2>
     <label>Full Name
-      <input type="text" name="name" value="Yassine El Amrani">
+      <input type="text" name="fullname" value="Sara El Idrissi">
     </label>
-
-    <label>Email
-      <input type="email" name="email" value="yassine@example.com">
-    </label>
-
-    <label>Phone
-      <input type="tel" name="phone" value="0611111111">
-    </label>
-
     <label>Date of Birth
-      <input type="text" name="dob" value="2009-05-12">
+      <input type="text" name="dob" value="05/12/2009">
+    </label>
+    <label>National ID
+      <input type="text" name="passport" value="AB123456">
     </label>
 
-    <label>
-      <input type="checkbox" name="subscribe"> Subscribe to newsletter
+    <h2>Contact</h2>
+    <label>Email Address
+      <input type="email" name="email" value="Sara@Example.com">
+    </label>
+    <label>Mobile Number
+      <input type="tel" name="mobile" value="0611111111">
+    </label>
+
+    <h2>Address</h2>
+    <label>Address
+      <input type="text" name="address" value="">
+    </label>
+    <label>City
+      <input type="text" name="city" value="Marrakesh">
     </label>
 
     <button type="submit">Submit</button>

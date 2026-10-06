@@ -117,9 +117,13 @@ def test_full_pipeline_with_docx():
         files={"file": ("cv.docx", data, "application/octet-stream")},
     )
     assert r1.status_code == 200
-    facts = r1.json()["facts"]
+    data = r1.json()
 
-    r2 = client.post("/build-truth", json={"facts": facts, "hints": {}})
+    r2 = client.post("/build-truth", json={
+        "facts": data["facts"],
+        "hints": {},
+        "contextual": data.get("contextual", {}),
+    })
     assert r2.status_code == 200
     truth = r2.json()["truth"]
 
@@ -129,7 +133,7 @@ def test_full_pipeline_with_docx():
             "name": "Yassine Annous",
             "email": "yassine@example.com",
             "phone": "+212612345678",
-            "dob": "12/05/2009",
+            "dob": "2009/05/12",
         },
     })
     assert r3.status_code == 200

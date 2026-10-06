@@ -23,7 +23,8 @@ def test_build_truth_full():
     assert truth["name"] == "Yassine Annous"
     assert truth["email"] == "Yassine Annous@example.com"
     assert truth["phone"] == "612345678"
-    assert truth["dob"] == "2009-05-12"
+    # An unlabeled date must NEVER be guessed as a date of birth.
+    assert "dob" not in truth
     assert truth["website"] == "https://Yassine Annous.dev"
     assert truth["national_id"] == "AB123456"
     assert result["warnings"] == []
@@ -40,16 +41,19 @@ def test_build_truth_only_email():
     assert result["truth"] == {"email": "a@b.com"}
 
 
-def test_build_truth_multiple_emails_picks_first():
+def test_build_truth_multiple_emails_are_not_guessed():
     facts = {"emails": ["first@x.com", "second@x.com"]}
     result = build_truth(facts)
-    assert result["truth"]["email"] == "first@x.com"
+    # Ambiguous: cannot know which email is the user's -> never guess.
+    assert "email" not in result["truth"]
+    assert any("Multiple emails" in w for w in result["warnings"])
 
 
 def test_build_truth_multiple_dates_warns():
     facts = {"dates": ["2009-05-12", "2022-01-01"]}
     result = build_truth(facts)
-    assert result["truth"]["dob"] == "2009-05-12"
+    # No 'dob' label -> dob stays absent; only an informational warning.
+    assert "dob" not in result["truth"]
     assert len(result["warnings"]) == 1
     assert "Multiple dates" in result["warnings"][0]
 
@@ -100,7 +104,8 @@ def test_build_truth_endpoint_simple():
     assert data["truth"]["name"] == "Yassine Annous"
     assert data["truth"]["email"] == "Yassine Annous@example.com"
     assert data["truth"]["phone"] == "612345678"
-    assert data["truth"]["dob"] == "2009-05-12"
+    # Unlabeled date must not be turned into a dob.
+    assert "dob" not in data["truth"]
 
 
 def test_build_truth_endpoint_with_hints():
@@ -169,8 +174,77 @@ def test_full_pipeline_extract_build_compare():
             "name": "Yassine Annous",
             "email": "Yassine Annous@example.com",
             "phone": "+212612345678",
-            "dob": "12/05/2009",
+            "dob": "2009/05/12",
         },
     })
     assert r3.status_code == 200
     assert r3.json()["summary"] == {"MATCH": 4, "CONFLICT": 0, "UNKNOWN": 0}
+
+
+# ---------------------------
+# Regression: dob is never inferred from an unlabeled date
+# ---------------------------
+
+def test_single_unlabeled_date_does_not_set_dob():
+    result = build_truth({"dates": ["2009-05-12"]})
+    assert "dob" not in result["truth"]
+    assert result["warnings"] == []
+
+
+def test_labeled_contextual_dob_still_sets_dob():
+    result = build_truth({}, contextual={"dob": "2009-05-12"})
+    assert result["truth"]["dob"] == "2009-05-12"
+
+
+def test_hint_sets_dob_even_with_many_dates():
+    facts = {"dates": ["2009-05-12", "2022-01-01"]}
+    result = build_truth(facts, hints={"dob": "1990-01-01"})
+    assert result["truth"]["dob"] == "1990-01-01"
+    assert result["warnings"] == []
+
+
+def test_ambiguous_contextual_dob_is_preserved_not_guessed():
+    result = build_truth({}, contextual={"dob": "05/12/2009"})
+    assert result["truth"]["dob"] == "05/12/2009"
+
+
+# ---------------------------
+# Regression: multiple generic facts are never guessed
+# ---------------------------
+
+def test_multiple_phones_are_not_guessed():
+    result = build_truth({"phones": ["612345678", "611111111"]})
+    assert "phone" not in result["truth"]
+    assert any("Multiple phone numbers" in w for w in result["warnings"])
+
+
+def test_multiple_names_are_not_guessed():
+    result = build_truth({"names": ["Sara", "El Idrissi"]})
+    assert "name" not in result["truth"]
+    assert any("Multiple names" in w for w in result["warnings"])
+
+
+def test_multiple_national_ids_are_not_guessed():
+    result = build_truth({"national_ids": ["AB123456", "AB999999"]})
+    assert "national_id" not in result["truth"]
+    assert any("Multiple national IDs" in w for w in result["warnings"])
+
+
+def test_single_fact_is_still_assigned():
+    result = build_truth({"phones": ["612345678"]})
+    assert result["truth"]["phone"] == "612345678"
+    assert result["warnings"] == []
+
+
+def test_contextual_label_beats_ambiguous_generic_facts():
+    facts = {"phones": ["612345678", "611111111"]}
+    result = build_truth(facts, contextual={"phone": "612345678"})
+    assert result["truth"]["phone"] == "612345678"
+    # contextual covered it, so no ambiguity warning is emitted for phone
+    assert not any("phone numbers" in w for w in result["warnings"])
+
+
+def test_hint_beats_ambiguous_generic_facts():
+    facts = {"emails": ["a@x.com", "b@x.com"]}
+    result = build_truth(facts, hints={"email": "me@x.com"})
+    assert result["truth"]["email"] == "me@x.com"

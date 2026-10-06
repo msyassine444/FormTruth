@@ -97,17 +97,27 @@ def test_str_number_with_spaces_matches_int():
 
 
 def test_dates_different_formats_match():
-    truth = {"dob": "2009-05-12"}
-    form = {"dob": "12/05/2009"}
+    # 25/12 can only be DD/MM -> unambiguous different format.
+    truth = {"dob": "2009-12-25"}
+    form = {"dob": "25/12/2009"}
     result = compare_data(truth, form)
     assert result.summary["MATCH"] == 1
 
 
 def test_dates_different_separators_match():
-    truth = {"dob": "2009-05-12"}
-    form = {"dob": "12-05-2009"}
+    truth = {"dob": "2009-12-25"}
+    form = {"dob": "25-12-2009"}
     result = compare_data(truth, form)
     assert result.summary["MATCH"] == 1
+
+
+def test_ambiguous_date_is_unknown_not_match():
+    # 05/12/2009 = 5 Dec OR 12 May -> must not be resolved into a MATCH.
+    truth = {"dob": "2009-05-12"}
+    form = {"dob": "05/12/2009"}
+    result = compare_data(truth, form)
+    assert result.summary == {"MATCH": 0, "CONFLICT": 0, "UNKNOWN": 1}
+    assert result.results[0].status == "UNKNOWN"
 
 
 def test_phone_with_spaces_matches():

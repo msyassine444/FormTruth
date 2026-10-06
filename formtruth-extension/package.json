@@ -1,0 +1,10 @@
+{
+  "name": "formtruth-extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FormTruth browser extension - local-only form consistency checker.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

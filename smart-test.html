@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FormTruth Smart Test</title>
+</head>
+
+<body>
+
+  <h1>FormTruth Smart Form Test</h1>
+
+  <form>
+
+    <label for="random-name">Email</label>
+    <input
+      id="random-name"
+      type="text"
+      aria-label="Email address"
+      placeholder="Enter your email"
+    >
+
+    <label for="abc123">Phone</label>
+    <input
+      id="abc123"
+      type="text"
+      data-testid="phone"
+    >
+
+    <label for="field-x">First Name</label>
+    <input
+      id="field-x"
+      type="text"
+      data-field="first_name"
+    >
+
+    <label for="weird-field">Last Name</label>
+    <input
+      id="weird-field"
+      type="text"
+      autocomplete="family-name"
+    >
+
+    <label for="random-email">Website</label>
+    <input
+      id="random-email"
+      type="text"
+      autocomplete="url"
+    >
+
+  </form>
+<div>
+  <span id="ft-email-label">Email address</span>
+
+  <input
+    id="random-email-field"
+    aria-labelledby="ft-email-label"
+    value="YOUR_PROFILE_EMAIL"
+  />
+</div>
+</body>
+</html>
